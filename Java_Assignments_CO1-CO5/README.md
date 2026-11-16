@@ -1,8 +1,7 @@
 # Programming in Java – CO1 to CO5 Emergency Submission Pack
 
-**Student name:** [Enter your name]  
-**Register number:** [Enter register number]  
-**IDE:** IntelliJ IDEA  
+**Student name:** Manyam Ratish Reddy  
+**Register number:** 192324240
 **Java version:** Run `java -version` and enter the installed version.
 
 This pack is organised by course outcome. Each CO folder contains a `REPORT_ANSWERS.md` and task-specific Java/SQL files where provided. Read each original assignment PDF alongside the corresponding report; the reports are answer drafts, not a substitute for checking the exact wording and your own understanding.
