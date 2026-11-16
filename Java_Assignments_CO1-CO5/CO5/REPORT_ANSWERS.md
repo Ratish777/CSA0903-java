@@ -1,0 +1,23 @@
+# CO5 – Data Persistence Engineering (Files and Databases)
+
+## Part A – Design and pseudocode
+
+### A1. File format
+Text record layout (UTF-8, one record per line): `passId|regNo|name|routeNo|boardingStop|validUntil|amount`. Escape delimiter and backslash in text fields (or reject delimiter and document constraint); validate field count and numeric/date fields on read. Binary layout with `DataOutputStream`: writeUTF(passId), writeUTF(regNo), writeUTF(name), writeInt(routeNo), writeUTF(boardingStop), writeUTF(validUntil ISO-8601), writeDouble(amount). For text add: validate; open `BufferedWriter` with CREATE+APPEND; write encoded line; newline; close. Find: open `BufferedReader`; read each line; split/parse; skip and log damaged records; compare passId; return match. List route: scan and emit records matching route. Missing file: return empty result for list or create on first add; damaged line: log line number and continue; incomplete final line: reject unless complete field count and checksum/validation pass. Fixed-length RandomAccessFile allows O(1) seek by record index but lookup by pass ID still needs index or O(n) scan; fixed padding wastes space.
+
+### A2. Buffering
+50 MB read byte-by-byte invokes roughly 52,428,800 Java read calls; buffering reduces underlying I/O calls to approximately fileSize/bufferSize (e.g. about 12,800 reads for 4 KiB chunks), though loop-level reads remain. Use `BufferedInputStream` or `BufferedReader`; buffering gives little benefit if the source already supplies large blocks or computation dominates. `Files.readAllLines` uses O(file size) memory; streaming buffer uses O(buffer size), preferred for large logs.
+
+### A3. DAO pattern
+Repeated steps: acquire connection, prepare SQL, bind parameters, execute, map ResultSet, close resources. Differences: table/columns, SQL predicates and mapping. `Dao<T,K>` defines insert, findById, findAll, update, delete; `StudentDao implements Dao<Student,Integer>`. Student fields map to `student(id PRIMARY KEY, reg_no UNIQUE, name, email)` columns. DAO localises SQL so a renamed column changes fewer classes; time/space per DB operation is essentially the same as embedded SQL, while design reduces maintenance cost.
+
+### A4. Serialization
+Mark live JDBC `Connection` and credentials/password as `transient`; persist durable business data only. Serializing Hostel traverses its reachable serializable Room and Resident object graph. Adding a field to Resident: with compatible `serialVersionUID`, absent new field defaults (null/0/false); incompatible UID causes InvalidClassException. CSV/JSON is portable and schema-readable but requires explicit mapping; size/time are O(n) in residents; field additions need schema/default handling. Java serialization is convenient but tightly couples files to class structure and must not serialize live connections/secrets.
+
+### A5. Transactions and SQL injection
+Set autoCommit(false); debit hostel wallet with `WHERE balance>=500`; require one updated row; credit canteen wallet; require one updated row; commit; on any exception rollback and rethrow; restore autoCommit. With two auto-commit updates, failure after debit loses money. Concatenated SQL allows crafted input such as an always-true condition to alter WHERE logic; PreparedStatement uses `SELECT ... WHERE id=? AND pwd=?` and binds values, treating them as data. Transactions add commit/locking overhead but preserve atomicity.
+
+## Part B – Implementation and evidence
+`TaskB1/PassStore.java` implements buffered add/find and skips malformed lines. `TaskB3/PassLoader.java` uses PreparedStatement batches of 1,000 inside one transaction; invalid conversion or SQL failure triggers rollback. `schema.sql` is supplied. For B1 timings, generate 1/10/50 MB test files and measure buffered/unbuffered runs using `System.nanoTime`; for B3 use 1k/10k/100k records with Statement, PreparedStatement and batch. Record actual local results and environment. Do not insert invented values into the report.
+
+B2 adversarial tests: malformed field count, nonnumeric amount, blank line; unsafe SQL login input designed to alter predicate; compare with PreparedStatement. B4 migration: stream file, validate each record, batch valid rows in a transaction, write rejects to a failure report; inspect `DatabaseMetaData` for product/driver/tables. For 12 campuses and concurrent counters choose a relational DB with unique constraints, transactions, indexes and connection pooling rather than independent serialized files. Search indexed pass ID is approximately O(log n) B-tree lookup; full route listing depends on index and result size.

@@ -1,0 +1,13 @@
+CREATE DATABASE IF NOT EXISTS transport_office;
+USE transport_office;
+CREATE TABLE IF NOT EXISTS bus_pass (
+ pass_id VARCHAR(20) PRIMARY KEY,
+ reg_no VARCHAR(30) NOT NULL,
+ name VARCHAR(100) NOT NULL,
+ route_no INT NOT NULL,
+ amount DECIMAL(10,2) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS users (
+ id VARCHAR(50) PRIMARY KEY,
+ pwd_hash VARCHAR(255) NOT NULL
+);
